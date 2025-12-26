@@ -87,30 +87,26 @@
 
       const postProcessedMasks = scaleAndProcessMasks(masks, maskThreshold / 10);
 
-      const colors = [
-        [0, 0, 139], // Dark blue
-        [0, 139, 0], // Dark green
-        [139, 0, 0], // Dark red
-      ];
+      const bestMaskIndex = iou_predictions.data.indexOf(
+        Math.max(...iou_predictions.data),
+      );
+      drawMask(context, 
+        postProcessedMasks[bestMaskIndex],
+        [255, 0, 0],
+        0.5,
+        ORIGINAL_SIZE,
+        ORIGINAL_SIZE,
+        canvasSize,
+        offset,
+      );
 
-      for (let i = 0; i < postProcessedMasks.length; i++) {
-        drawMask(
-          context,
-          postProcessedMasks[i],
-          colors[i % colors.length] as [number, number, number],
-          0.5,
-          ORIGINAL_SIZE,
-          ORIGINAL_SIZE,
-          canvasSize,
-          offset,
-        );
-      }
-
-      for (let i = 0; i < postProcessedMasks.length; i++) {
-        drawContour(context, postProcessedMasks[i], canvasSize, canvasSize, offset);
-      }
-
-      console.log('Masks drawn:', postProcessedMasks.length);
+      drawContour(
+        context,
+        postProcessedMasks[bestMaskIndex],
+        canvasSize,
+        canvasSize,
+        offset,
+      );
     } catch (error) {
       console.error(error);
       currentStatus.set(`Error running inference: ${error}`);
