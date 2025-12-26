@@ -20,15 +20,38 @@
   let resizeObserver: ResizeObserver;
   let isClickDisabled = true;
 
-  $: if (canvas && $inputImageData) {
-    canvasSize = Math.min(canvas.width, canvas.height);
-    scale = canvasSize / ORIGINAL_SIZE;
-    offset = {
-      x: (canvas.width - canvasSize) / 2,
-      y: (canvas.height - canvasSize) / 2,
-    };
-    drawImage(canvas, $inputImageData, ORIGINAL_SIZE, canvasSize);
+  function updateImage(image: HTMLImageElement | ImageBitmap) {
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    const imageAspect = $inputImageData.width / $inputImageData.height;
+    const canvasAspect = canvas.width / canvas.height;
 
+    let drawWidth, drawHeight;
+    let offsetX = 0, offsetY = 0;
+
+    if (imageAspect > canvasAspect) {
+      drawWidth = canvas.width;
+      drawHeight = canvas.width / imageAspect;
+      offsetY = (canvas.height - drawHeight) / 2;
+    } else {
+      drawHeight = canvas.height;
+      drawWidth = canvas.height * imageAspect;
+      offsetX = (canvas.width - drawWidth) / 2;
+    }
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+    canvasSize = Math.min(drawWidth, drawHeight);
+    scale = canvasSize / ORIGINAL_SIZE;
+    offset = { x: offsetX, y: offsetY };
+  }
+
+  $: if (canvas && $inputImageData) {
+    createImageBitmap($inputImageData).then((bitmap) => {
+      imageBitmap = bitmap;
+      updateImage(bitmap);
+    });
     if (!resizeObserver) {
       resizeObserver = new ResizeObserver(() => {
         if (canvas.parentElement) {
@@ -39,8 +62,6 @@
       resizeObserver.observe(canvas.parentElement);
     }
   }
-
-  $: $inputImageData, drawImage(canvas, $inputImageData, ORIGINAL_SIZE, canvasSize);
 
   $: if ($encoderOutput) {
     isClickDisabled = false;
@@ -59,9 +80,10 @@
     );
 
     const context = canvas.getContext('2d');
-    if (!context) return;
+    if (!context || !imageBitmap) return;
 
-    drawImage(canvas, $inputImageData, ORIGINAL_SIZE, canvasSize);
+    updateImage(imageBitmap);
+
     context.fillStyle = 'rgba(0, 0, 139, 0.7)'; // Dark blue with some transparency
     context.fillRect(x * scale + offset.x - 1, y * scale + offset.y - 1, 2, 2); // Smaller 2x2 pixel
 
